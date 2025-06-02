@@ -15,7 +15,7 @@ async fn main() -> Result<(), E> {
     ];
 
     let search_db = SearchDb::new();
-    // search_db.upsert_bulk(&messages).await?;
+    search_db.upsert_bulk(&messages).await?;
     let message = search_db.search("roses").await?;
     println!("{message}");
 
@@ -37,7 +37,7 @@ mod test {
             .unwrap();
 
         let search_db = SearchDb::new();
-        rt.block_on(search_db.delete_wikitext_collection())?;
+        // rt.block_on(search_db.delete_wikitext_collection())?;
         rt.block_on(search_db.create_wikitext_collection())?;
         Ok(())
     }

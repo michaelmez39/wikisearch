@@ -1,26 +1,40 @@
 use std::borrow::Cow;
 
-use nom::{IResult, Parser, bytes::complete::take_until, combinator::map, sequence::delimited};
+use nom::{
+    IResult, Parser,
+    branch::alt,
+    bytes::{
+        complete::{take_until, take_while},
+        tag,
+    },
+    combinator::map,
+    sequence::delimited,
+};
 
-pub enum Value<'a> {
-    Text(Cow<'a, str>),
+pub enum Value {
+    Text(String),
+    Hr,
 }
 
 /// Wikitext parser
-pub fn parse(text: &str) -> Vec<Value> {
-    parse_text(text)
-        .map(|t| vec![t.1])
-        .expect("this parser is bad, lower expectations")
-    // todo!("Implement");
+// pub fn parse(text: &str) -> Vec<Value> {}
+
+fn parse_block(input: &str) -> IResult<&str, Value> {
+    alt([parse_hr]).parse(input)
+}
+
+fn parse_hr(input: &str) -> IResult<&str, Value> {
+    let (i, _) = tag("----").parse(input)?;
+    let (i, _) = take_while(|c| c == '-').parse(i)?;
+    Ok((i, Value::Hr))
 }
 
 fn parse_text(input: &str) -> IResult<&str, Value> {
-    map(take_until("{{"), |t: &str| Value::Text(Cow::from(t))).parse(input)
+    map(take_until("{{"), |t: &str| Value::Text(t.to_string())).parse(input)
 }
 
-// fn parse_template(input: &str) -> IResult<&str, Value> {
-//     map(
-//         delimited(tag("{{"), parse_text(), tag("}}")),
-//         |s| parse_
-//     ).parse(input)
-// }
+// fn parse_link(input: &str) -> IResult<&str, Value> {}
+
+fn parse_template(input: &str) -> IResult<&str, Value> {
+    delimited(tag("{{"), parse_text, tag("}}")).parse(input)
+}

@@ -10,6 +10,7 @@ axum-core = "0.5.2"
 candle-core = "0.9.1"
 candle-nn = "0.9.1"
 candle-transformers = "0.9.1"
+nom = "8.0.0"
 qdrant-client = "1.14.0"
 quick-xml = { version = "0.37.5", features = ["serialize"] }
 reqwest = { version = "0.12.18", features = ["json"] }

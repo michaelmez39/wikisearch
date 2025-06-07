@@ -1,6 +1,18 @@
 #![allow(dead_code)]
 use serde::Deserialize;
 
+pub fn get_article_text(wiki: &MediaWiki) -> Option<&String> {
+    wiki.pages
+        .first()
+        .as_ref()?
+        .revisions
+        .as_ref()?
+        .first()?
+        .text
+        .value
+        .as_ref()
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename = "mediawiki")]
 pub struct MediaWiki {
@@ -155,6 +167,8 @@ pub struct ContentTextType {
 
 #[cfg(test)]
 mod test {
+    use crate::mediawiki::get_article_text;
+
     use super::MediaWiki;
     use anyhow::Error as E;
     use anyhow::Result as AnyResult;
@@ -174,7 +188,12 @@ mod test {
     #[test]
     fn deserialize() -> Result<(), E> {
         let test_xml = include_str!("../resources/articles/August_Borsig.xml");
-        let media_wiki: MediaWiki = quick_xml::de::from_str(test_xml)?;
+        let wiki: MediaWiki = quick_xml::de::from_str(test_xml)?;
+
+        let page = get_article_text(&wiki).unwrap();
+
+        println!("{page}");
+
         Ok(())
     }
 

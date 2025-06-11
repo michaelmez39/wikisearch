@@ -2,7 +2,7 @@ use anyhow::Error as E;
 use candle_core::{Device, IndexOp, Tensor};
 use candle_nn::VarBuilder;
 use candle_transformers::models::bert::{BertModel, Config, DTYPE};
-use tokenizers::{EncodeInput, InputSequence, PaddingParams, PaddingStrategy, Tokenizer};
+use tokenizers::{EncodeInput, InputSequence, Tokenizer};
 
 pub struct Embedder {
     model: BertModel,

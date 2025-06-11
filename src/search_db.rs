@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Error as E;
 use qdrant_client::{
     Payload, Qdrant,
@@ -15,13 +17,14 @@ const WIKITEXT: &'static str = "wikitext";
 
 pub struct SearchDb {
     client: Qdrant,
-    embed: Embedder,
+    embed: Arc<Embedder>,
 }
 
+#[allow(dead_code)]
 impl SearchDb {
     pub fn from_url(url: &str) -> Self {
         let client = Qdrant::from_url(url).build().unwrap();
-        let embed = Embedder::new().expect("should be able to create embedder");
+        let embed = Arc::new(Embedder::new().expect("should be able to create embedder"));
         Self { client, embed }
     }
 
@@ -30,22 +33,19 @@ impl SearchDb {
         Self::from_url("http://localhost:6334")
     }
 
-    pub async fn upsert(&self, message: &str) -> Result<(), E> {
-        let point = self.map_message(message)?;
+    pub async fn upsert(&self, message: &str) -> Result<Uuid, E> {
+        let embedder = self.embed.clone();
+        let msg = message.to_string();
+        let embedding = tokio::task::spawn_blocking(move || embedder.embed(msg)).await??;
+        let id = Uuid::new_v4();
+        let payload: Payload = serde_json::json!({ "message": message }).try_into()?;
+        let point = PointStruct::new(id.to_string(), embedding, payload);
 
         self.client
             .upsert_points(UpsertPointsBuilder::new(WIKITEXT, vec![point]))
             .await?;
 
-        Ok(())
-    }
-
-    fn map_message(&self, message: &str) -> Result<PointStruct, E> {
-        let embedding = self.embed.embed(message)?;
-        let id = Uuid::new_v4().to_string();
-        let payload: Payload = serde_json::json!({ "message": message }).try_into()?;
-
-        Ok(PointStruct::new(id, embedding, payload))
+        Ok(id)
     }
 
     pub async fn upsert_bulk(&self, messages: &Vec<&str>) -> Result<(), E> {

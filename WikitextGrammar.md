@@ -1,10 +1,10 @@
 Wikitext Grammar
 <pre>
   document         := block*
-  block            := heading | paragraph | hr | list
+  block            := heading | paragraph | hr | list | space
   paragraph        := inline (new_line inline)*
 
-  heading          := heading1 | heading2 | heading3 | heading4 | heading5 | heading6
+  heading          := (heading1 | heading2 | heading3 | heading4 | heading5 | heading6) new_line
   heading1         := "=" text "="
   heading2         := "==" text "=="
   heading3         := "===" text "==="
@@ -24,7 +24,8 @@ Wikitext Grammar
 
   hr               := "-"{4,}
   colon            := ":"
-  new_line         := "\n"
+  space            := new_line | " " | "\t"
+  new_line         := "\n" | EOF
   text             := character+ where character ≠ '{', '[', '=', '*', '#', ':', '-', '\n'
   text_no_pipe     := character+ where character ≠ '|' and ≠ above specials
 </pre>

@@ -9,6 +9,7 @@ use qdrant_client::{
         value::Kind,
     },
 };
+use tracing::info;
 use uuid::Uuid;
 
 use crate::embedder::Embedder;
@@ -18,6 +19,12 @@ const WIKITEXT: &'static str = "wikitext";
 pub struct SearchDb {
     client: Qdrant,
     embed: Arc<Embedder>,
+}
+
+impl std::fmt::Debug for SearchDb {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SearchDb::[{:?}]", self.embed)
+    }
 }
 
 #[allow(dead_code)]
@@ -72,6 +79,7 @@ impl SearchDb {
     }
 
     pub async fn search(&self, search_text: &str) -> Result<String, E> {
+        info!("Search [{}]", search_text);
         let search_vector = self.embed.embed(search_text)?;
 
         let search = SearchPointsBuilder::new(WIKITEXT, search_vector, 384)
@@ -110,5 +118,20 @@ impl SearchDb {
     pub async fn delete_wikitext_collection(&self) -> Result<(), E> {
         self.client.delete_collection(WIKITEXT).await?;
         Ok(())
+    }
+
+    pub async fn has_wikitext(&self) -> Result<bool, E> {
+        let collections = self.client.list_collections().await?.collections;
+        info!("Checking for {WIKITEXT} collection");
+        collections
+            .iter()
+            .map(|c| &c.name)
+            .for_each(|n| info!("{n}"));
+
+        Ok(collections
+            .iter()
+            .map(|c| &c.name)
+            .find(|n| *n == WIKITEXT)
+            .is_some())
     }
 }

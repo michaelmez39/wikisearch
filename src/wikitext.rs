@@ -1,4 +1,4 @@
-#[allow(dead_code)]
+#![allow(dead_code)]
 /// Removes wikitext macros
 /// e.g. stuff{{123}} => stuff
 ///

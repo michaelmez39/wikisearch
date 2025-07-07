@@ -10,6 +10,12 @@ pub struct Embedder {
     device: Device,
 }
 
+impl std::fmt::Debug for Embedder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "BertEmbedder::Device[{:?}]", self.device)
+    }
+}
+
 impl Embedder {
     pub fn new() -> Result<Self, E> {
         let device = Device::Cpu;
@@ -61,7 +67,6 @@ impl Embedder {
     where
         T: Into<InputSequence<'s>> + std::fmt::Debug,
     {
-        println!("embed: {message:?}");
         let tensor = self.feed_forward(message)?;
         let v = tensor_to_vec(&tensor)?;
         Ok(v)

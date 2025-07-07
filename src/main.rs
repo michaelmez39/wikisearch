@@ -1,9 +1,13 @@
-#![feature(iter_map_windows)]
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    io::{BufRead, Write},
+    path::PathBuf,
+    sync::Arc,
+};
 
 use anyhow::Error as E;
 use mediawiki::MediaWiki;
 use search_db::SearchDb;
+use tracing::info;
 
 mod embedder;
 mod mediawiki;
@@ -12,32 +16,54 @@ mod wikitext;
 
 #[tokio::main]
 async fn main() -> Result<(), E> {
+    // tracing_subscriber::fmt()
+    //     .with_span_events(FmtSpan::NEW)
+    //     .init();
+
     let search_db = SearchDb::new();
-
-    // let messages = vec![
-    //     "Roses are red, violets are blue",
-    //     "Calculus is the study of rates of change",
-    //     "It is hard to define a species, and scientists have used multliple definitions for the word",
-    //     "Four score and seven years ago",
-    // ];
-
-    // search_db.upsert_bulk(&messages).await?;
-    search_db.delete_wikitext_collection().await?;
-    search_db.create_wikitext_collection().await?;
     let search_db = Arc::new(search_db);
-    build_index(search_db.clone()).await?;
-    let message = search_db.search("August Borsig").await?;
-    println!("{message}");
+    if !search_db.has_wikitext().await? && false {
+        info!("Wikitext collection not found, recreating the database");
+        search_db.delete_wikitext_collection().await?;
+        search_db.create_wikitext_collection().await?;
+        build_index(search_db.clone()).await?;
+    }
+
+    let stdin = std::io::stdin();
+    let stdout = std::io::stdout();
+    let mut input_iter = stdin.lock().lines();
+
+    print!("Search: ");
+    stdout.lock().flush()?;
+    while let Some(Ok(ref line)) = input_iter.next() {
+        if line == "exit" {
+            println!("Goodbye!");
+            return Ok(());
+        }
+
+        let response = search_db.search(line).await?;
+        println!("{}\n", response);
+
+        stdout.lock().flush()?;
+        print!("Search: ");
+        stdout.lock().flush()?;
+    }
 
     Ok(())
 }
 
+/// TODO:
+/// This might spawn too many threads on tokios default threadpool.
+/// Consider using a library like rayon, and do a bulk embedding
 async fn build_index(search_db: Arc<SearchDb>) -> Result<(), E> {
     let mut files = tokio::fs::read_dir("resources/articles").await?;
 
     let mut handles = Vec::new();
     while let Ok(Some(file)) = files.next_entry().await {
-        handles.push(tokio::spawn(index_vector(search_db.clone(), file.path())));
+        let search_db_clone = search_db.clone();
+        handles.push(tokio::task::spawn_blocking(move || {
+            index_vector(search_db_clone, file.path())
+        }));
     }
 
     for handle in handles {
